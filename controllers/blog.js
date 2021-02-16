@@ -1,39 +1,32 @@
 const Blog = require("../models/Blog");
 
-exports.getAllPosts = (request, response) => {
-  Blog.find({}).then((posts) => {
-    response.json(posts);
-  });
+exports.getAllPosts = async (request, response) => {
+  const posts = await Blog.find({});
+  response.json(posts);
 };
 
-exports.getPost = (request, response) => {
+exports.getPost = async (request, response) => {
   const postId = request.params.postId;
-  Blog.findById(postId).then((post) => {
-    response.json(post);
-  });
+  const post = await Blog.findById(postId);
+  response.json(post);
 };
 
-exports.addPost = (request, response) => {
+exports.addPost = async (request, response) => {
   const post = request.body;
   const newPost = new Blog(post);
-  newPost.save().then((post) => {
-    response.json(post);
-  });
+  await newPost.save();
+  response.json(post);
 };
 
-exports.updatePost = (request, response) => {
+exports.updatePost = async (request, response) => {
   const postId = request.params.postId;
-  const post = request.body;
-  Blog.findByIdAndUpdate(postId, post).then((post) => {
-    response.json(post);
-  });
+  const updatedPost = await Blog.findByIdAndUpdate(postId, request.body);
+  response.json(updatedPost);
 };
 
-exports.deletePost = (request, response) => {
+exports.deletePost = async (request, response) => {
   const postId = request.params.postId;
-  Blog.findByIdAndRemove(postId)
-    .exec()
-    .then((res) => {
-      response.status(204).end();
-    });
+  await Blog.findByIdAndRemove(postId).exec();
+
+  response.status(204).end();
 };
