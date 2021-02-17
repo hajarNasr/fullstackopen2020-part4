@@ -20,7 +20,9 @@ exports.addPost = async (request, response) => {
 
 exports.updatePost = async (request, response) => {
   const postId = request.params.postId;
-  const updatedPost = await Blog.findByIdAndUpdate(postId, request.body);
+  const updatedPost = await Blog.findByIdAndUpdate(postId, request.body, {
+    new: true,
+  });
   response.json(updatedPost);
 };
 

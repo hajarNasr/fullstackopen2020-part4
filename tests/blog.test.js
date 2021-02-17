@@ -81,3 +81,27 @@ describe("POST METHOD", () => {
 afterAll(() => {
   mongoose.connection.close();
 });
+
+describe("DELETE METHOD", () => {
+  const URL = "/api/posts/";
+  test("DELETE: posts with valid ids can be deleted", async () => {
+    const response = await api.get(URL);
+    const firstPostId = response.body[0].id;
+
+    await api.delete(`${URL}${firstPostId}`).expect(204);
+
+    const responseAfterDeletion = await api.get(URL);
+    const postsAfterDeletion = responseAfterDeletion.body;
+    expect(postsAfterDeletion.length).toBe(initialPosts.length - 1);
+  });
+});
+
+describe("UPDATE METHOD", () => {
+  const URL = "/api/posts/";
+  test("UPDATE: posts with valid ids can be updated", async () => {
+    const response = await api.get(URL);
+    const firstPostId = response.body[0].id;
+
+    await api.put(`${URL}${firstPostId}`).send({ likes: 200 }).expect(200);
+  });
+});
