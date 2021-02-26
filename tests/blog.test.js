@@ -1,5 +1,6 @@
 const supertest = require("supertest");
 const app = require("../index").app;
+const jwt = require("jsonwebtoken");
 const mongoose = require("mongoose");
 
 const api = supertest(app);
@@ -43,14 +44,38 @@ describe("GET METHOD", () => {
 
 describe("POST METHOD", () => {
   const postURL = "/api/posts/";
-  test("Post: add a new post", async () => {
+  let createUserResponse;
+  beforeEach(async () => {
+    createUserResponse = await api
+      .post("/api/users/")
+      .send({ username: "hajar", password: "haj12345" });
+  });
+
+  test("Post: adding a new post fails if the token doesn't exist", async () => {
     const newPost = {
       title: "Test Adding a New Post",
       author: "A",
       likes: 15,
       url: "URL",
     };
-    await api.post(postURL).send(newPost).expect(200);
+    await api.post(postURL).send(newPost).expect(401);
+
+    const posts = await api.get(postURL);
+    expect(posts.body.length).toBe(initialPosts.length);
+  });
+
+  test("Post: adding a new post works if the token is valid", async () => {
+    const newPost = {
+      title: "Test Adding a New Post",
+      author: "A",
+      likes: 15,
+      url: "URL",
+    };
+    await api
+      .post(postURL)
+      .set("Authorization", "bearer " + createUserResponse.body.token)
+      .send(newPost)
+      .expect(200);
 
     const posts = await api.get(postURL);
     expect(posts.body.length).toBe(initialPosts.length + 1);
@@ -62,7 +87,11 @@ describe("POST METHOD", () => {
       author: "B",
       url: "URL",
     };
-    await api.post(postURL).send(postWithoutLikes).expect(200);
+    await api
+      .post(postURL)
+      .set("Authorization", "bearer " + createUserResponse.body.token)
+      .send(postWithoutLikes)
+      .expect(200);
 
     const posts = await api.get(postURL);
 
@@ -74,26 +103,33 @@ describe("POST METHOD", () => {
   test("POST: posts without url or author are invalid", async () => {
     const postWithoutURL = { title: "Invalid Post", author: "A", likes: 15 };
     const postWithoutAuthor = { title: "Invalid Post", likes: 15, url: "URL" };
-    await api.post(postURL).send(postWithoutAuthor).expect(400);
-    await api.post(postURL).send(postWithoutURL).expect(400);
+    await api
+      .post(postURL)
+      .set("Authorization", "bearer " + createUserResponse.body.token)
+      .send(postWithoutAuthor)
+      .expect(400);
+    await api
+      .post(postURL)
+      .set("Authorization", "bearer " + createUserResponse.body.token)
+      .send(postWithoutURL)
+      .expect(400);
+  });
+
+  test("DELETE: posts with valid ids can be deleted", async () => {
+    const response = await api.get(postURL);
+    const firstPostId = response.body[0].id;
+    const userId = createUserResponse.body.user.id;
+    await api
+      .delete(`${postURL}${userId}/${firstPostId}`)
+      .set("Authorization", "bearer " + createUserResponse.body.token)
+      .expect(204);
+    const responseAfterDeletion = await api.get(postURL);
+    const postsAfterDeletion = responseAfterDeletion.body;
+    expect(postsAfterDeletion.length).toBe(initialPosts.length - 1);
   });
 });
 afterAll(() => {
   mongoose.connection.close();
-});
-
-describe("DELETE METHOD", () => {
-  const URL = "/api/posts/";
-  test("DELETE: posts with valid ids can be deleted", async () => {
-    const response = await api.get(URL);
-    const firstPostId = response.body[0].id;
-
-    await api.delete(`${URL}${firstPostId}`).expect(204);
-
-    const responseAfterDeletion = await api.get(URL);
-    const postsAfterDeletion = responseAfterDeletion.body;
-    expect(postsAfterDeletion.length).toBe(initialPosts.length - 1);
-  });
 });
 
 describe("UPDATE METHOD", () => {

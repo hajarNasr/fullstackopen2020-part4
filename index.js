@@ -7,6 +7,7 @@ require("dotenv").config();
 require("express-async-errors");
 
 const blogRoutes = require("./routers/blog");
+const usersRoutes = require("./routers/users");
 const middleware = require("./utils/middleware");
 
 const app = express();
@@ -23,9 +24,11 @@ app.use(
   )
 );
 
-let MONGODB_URI = process.env.MONGODB_URI;
+let MONGODB_URI = process.env.TEST_MONGODB_URI;
 if (process.env.NODE_ENV === "test") {
+  const testsRoutes = require("./routers/tests");
   MONGODB_URI = process.env.TEST_MONGODB_URI;
+  app.use("/api/testing", testsRoutes);
 }
 mongoose
   .connect(MONGODB_URI, {
@@ -43,7 +46,9 @@ mongoose
 
 app.use(express.static("build"));
 
+app.use(middleware.tokenExtractor);
 app.use("/api/posts", blogRoutes);
+app.use("/api/users", usersRoutes);
 
 app.use(middleware.error404);
 app.use(middleware.errorHandler);
